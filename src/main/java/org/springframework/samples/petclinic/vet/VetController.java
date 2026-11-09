@@ -17,64 +17,65 @@ package org.springframework.samples.petclinic.vet;
 
 import java.util.List;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.samples.petclinic.model.PageResult;
+import org.springframework.samples.petclinic.system.Flash;
+
+import io.quarkus.qute.CheckedTemplate;
+import io.quarkus.qute.TemplateInstance;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 
 /**
+ * Migrated from a Spring MVC {@code @Controller} to a JAX-RS resource.
+ *
  * @author Juergen Hoeller
  * @author Mark Fisher
  * @author Ken Krebs
  * @author Arjen Poutsma
  */
-@Controller
-class VetController {
+@Path("/")
+public class VetController {
 
-	private final VetRepository vetRepository;
+	private static final int PAGE_SIZE = 5;
 
-	public VetController(VetRepository vetRepository) {
-		this.vetRepository = vetRepository;
+	@CheckedTemplate(basePath = "vets")
+	public static class Templates {
+
+		public static native TemplateInstance vetList(List<Vet> listVets, int currentPage, int totalPages,
+				long totalItems);
+
 	}
 
-	@GetMapping("/vets.html")
-	public String showVetList(@RequestParam(defaultValue = "1") int page, Model model,
-			RedirectAttributes redirectAttributes) {
-		Page<Vet> paginated = findPaginated(page);
-		if (page < 1 || page > Math.max(paginated.getTotalPages(), 1)) {
-			redirectAttributes.addAttribute("page", 1);
-			return "redirect:/vets.html";
+	@Inject
+	VetService vetService;
+
+	@GET
+	@Path("/vets.html")
+	@Produces(MediaType.TEXT_HTML)
+	public Response showVetList(@QueryParam("page") @DefaultValue("1") int page) {
+		PageResult<Vet> paginated = vetService.findAll(Math.max(page, 1) - 1, PAGE_SIZE);
+		if (page < 1 || page > Math.max(paginated.totalPages(), 1)) {
+			return Flash.redirect("/vets.html?page=1");
 		}
-		return addPaginationModel(page, paginated, model);
+		return Response
+			.ok(Templates.vetList(paginated.content(), page, paginated.totalPages(), paginated.totalElements()))
+			.build();
 	}
 
-	private String addPaginationModel(int page, Page<Vet> paginated, Model model) {
-		List<Vet> listVets = paginated.getContent();
-		model.addAttribute("currentPage", page);
-		model.addAttribute("totalPages", paginated.getTotalPages());
-		model.addAttribute("totalItems", paginated.getTotalElements());
-		model.addAttribute("listVets", listVets);
-		return "vets/vetList";
-	}
-
-	private Page<Vet> findPaginated(int page) {
-		int pageSize = 5;
-		int safePage = Math.max(page, 1);
-		Pageable pageable = PageRequest.of(safePage - 1, pageSize);
-		return vetRepository.findAll(pageable);
-	}
-
-	@GetMapping({ "/vets" })
-	public @ResponseBody Vets showResourcesVetList() {
+	@GET
+	@Path("/vets")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Vets showResourcesVetList() {
 		// Here we are returning an object of type 'Vets' rather than a collection of Vet
 		// objects so it is simpler for JSon/Object mapping
 		Vets vets = new Vets();
-		vets.getVetList().addAll(this.vetRepository.findAll());
+		vets.getVetList().addAll(vetService.findAll());
 		return vets;
 	}
 

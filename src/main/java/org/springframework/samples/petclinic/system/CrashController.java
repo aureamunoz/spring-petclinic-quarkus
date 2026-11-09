@@ -15,20 +15,24 @@
  */
 package org.springframework.samples.petclinic.system;
 
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
 
 /**
  * Controller used to showcase what happens when an exception is thrown
  *
  * @author Michael Isvy
  * <p/>
- * Also see how a view that resolves to "error" has been added ("error.html").
+ * Also see how a view that resolves to "error" has been added ("error.html") and rendered
+ * by {@link ErrorMapper}.
  */
-@Controller
-class CrashController {
+@Path("/oups")
+public class CrashController {
 
-	@GetMapping("/oups")
+	@GET
+	@Produces({ MediaType.TEXT_HTML, MediaType.APPLICATION_JSON })
 	public String triggerException() {
 		throw new RuntimeException(
 				"Expected: controller used to showcase what " + "happens when an exception is thrown");

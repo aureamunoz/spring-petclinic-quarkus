@@ -31,27 +31,11 @@ public class Person extends BaseEntity {
 	@Column(length = 30)
 	@Size(max = 30)
 	@NotBlank
-	private String firstName;
+	public String firstName;
 
 	@Column(length = 30)
 	@Size(max = 30)
 	@NotBlank
-	private String lastName;
-
-	public String getFirstName() {
-		return this.firstName;
-	}
-
-	public void setFirstName(String firstName) {
-		this.firstName = firstName;
-	}
-
-	public String getLastName() {
-		return this.lastName;
-	}
-
-	public void setLastName(String lastName) {
-		this.lastName = lastName;
-	}
+	public String lastName;
 
 }

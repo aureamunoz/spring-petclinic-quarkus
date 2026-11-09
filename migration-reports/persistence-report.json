@@ -1,0 +1,38 @@
+{
+  "module": "persistence",
+  "status": "SUCCESS",
+  "timestamp": "2026-11-06T15:59:31Z",
+  "entities": [
+    "Owner",
+    "Pet",
+    "PetType",
+    "Visit",
+    "Vet",
+    "Specialty"
+  ],
+  "mapped_superclasses": [
+    "BaseEntity -> PanacheEntityBase",
+    "NamedEntity",
+    "Person"
+  ],
+  "repositories_removed": [
+    "OwnerRepository",
+    "PetTypeRepository",
+    "VetRepository"
+  ],
+  "files_created": [
+    "model/PageResult.java",
+    "vet/VetService.java"
+  ],
+  "validation": {
+    "tool": "mtools quarkit_validate (persistence)",
+    "rules_total": 31,
+    "passed": 31,
+    "failed": 0,
+    "warnings": 0
+  },
+  "notes": [
+    "PanacheEntityBase used instead of PanacheEntity to keep Integer IDENTITY ids required by the SQL schema",
+    "Collections (Owner.pets, Pet.visits, Vet.specialties) kept private with accessors because their getters return different types or contain logic"
+  ]
+}

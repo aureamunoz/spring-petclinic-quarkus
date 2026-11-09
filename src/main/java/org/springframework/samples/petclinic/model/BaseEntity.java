@@ -17,6 +17,7 @@ package org.springframework.samples.petclinic.model;
 
 import java.io.Serializable;
 
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -25,24 +26,21 @@ import jakarta.persistence.MappedSuperclass;
 /**
  * Simple JavaBean domain object with an id property. Used as a base class for objects
  * needing this property.
+ * <p>
+ * Migrated to Panache Active Record. {@code PanacheEntityBase} is used instead of
+ * {@code PanacheEntity} to keep the existing {@code Integer} IDENTITY primary key that
+ * the SQL schema relies on ({@code PanacheEntity} would impose a {@code Long} id backed by
+ * a sequence).
  *
  * @author Ken Krebs
  * @author Juergen Hoeller
  */
 @MappedSuperclass
-public class BaseEntity implements Serializable {
+public class BaseEntity extends PanacheEntityBase implements Serializable {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Integer id;
-
-	public Integer getId() {
-		return id;
-	}
-
-	public void setId(Integer id) {
-		this.id = id;
-	}
+	public Integer id;
 
 	public boolean isNew() {
 		return this.id == null;

@@ -15,22 +15,23 @@
  */
 package org.springframework.samples.petclinic.owner;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.Test;
+
+/**
+ * Test class for {@link Owner}
+ */
 class OwnerTests {
 
 	@Test
 	void addPetAddsPersistedPet() {
 		Owner owner = new Owner();
 		Pet pet = new Pet();
-		pet.setId(5);
-		pet.setName("Buddy");
-
+		pet.id = 5;
+		pet.name = "Buddy";
 		owner.addPet(pet);
-
 		assertTrue(owner.getPets().contains(pet));
 		assertEquals(1, owner.getPets().size());
 	}
@@ -39,12 +40,10 @@ class OwnerTests {
 	void addPetDoesNotAddDuplicatePet() {
 		Owner owner = new Owner();
 		Pet pet = new Pet();
-		pet.setId(5);
-		pet.setName("Buddy");
-
+		pet.id = 5;
+		pet.name = "Buddy";
 		owner.addPet(pet);
 		owner.addPet(pet);
-
 		assertEquals(1, owner.getPets().size());
 	}
 

@@ -1,0 +1,45 @@
+project:
+  name: spring-petclinic-quarkus
+  source_path: /Users/auri/tmp/gotechworld-demo/spring-petclinic
+  target_path: /Users/auri/tmp/gotechworld-demo/spring-petclinic-quarkus
+
+source_technology:
+  spring_boot_version: "4.1.0"
+  java_version: "17"
+  build_tool: "Maven"
+
+target_technology:
+  quarkus_version: "3.40.1.1"
+  java_version: "21"
+  build_tool: "Maven"
+
+detected_features:
+  spring_web: true
+  spring_data_jpa: true
+  spring_security: false
+  spring_kafka: false
+  spring_rabbitmq: false
+  spring_jms: false
+  spring_scheduled: false
+  spring_cache: true
+  view_layer: true
+
+decisions:
+  strategy: "full-quarkus"
+  strategy_source: "argument"
+  quarkus_version_source: "default"
+  java_version_source: "argument"
+  persistence: "panache-active-record"
+  persistence_source: "argument"
+  rest_framework: "quarkus-rest"
+  rest_framework_source: "default"
+  messaging_transport: "none"
+  messaging_transport_source: "default"
+  view_layer: "qute"
+  view_layer_source: "default"
+  security_approach: "none"
+  security_approach_source: "default"
+
+metadata:
+  complexity: "medium"
+  generatedAt: "2026-11-06T15:45:09Z"

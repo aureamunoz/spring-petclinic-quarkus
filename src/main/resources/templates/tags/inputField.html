@@ -1,0 +1,18 @@
+<div class="form-group{#if errors.hasFieldErrors(name)} has-error{/if}">
+  <label for="{name}" class="col-sm-2 control-label">{label}</label>
+  <div class="col-sm-10">
+    <div>
+      {#if type == 'date'}
+      <input class="form-control" type="date" id="{name}" name="{name}" value="{value ?: ''}"{#if min??} min="{min}"{/if} />
+      {#else}
+      <input class="form-control" type="text" id="{name}" name="{name}" value="{value ?: ''}" />
+      {/if}
+    </div>
+    {#if errors.hasFieldErrors(name)}
+    <span class="fa fa-remove form-control-feedback" aria-hidden="true"></span>
+    <span class="help-inline">{errors.getFieldError(name)}</span>
+    {#else}
+    <span class="fa fa-ok form-control-feedback" aria-hidden="true"></span>
+    {/if}
+  </div>
+</div>

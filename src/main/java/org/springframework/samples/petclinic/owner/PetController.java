@@ -15,167 +15,215 @@
  */
 package org.springframework.samples.petclinic.owner;
 
+import java.text.ParseException;
 import java.time.LocalDate;
-import java.util.Collection;
+import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.ModelMap;
-import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.WebDataBinder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.InitBinder;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.samples.petclinic.system.Flash;
+import org.springframework.samples.petclinic.system.FormErrors;
+import org.springframework.samples.petclinic.system.Messages;
 
-import jakarta.validation.Valid;
-
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import io.quarkus.narayana.jta.QuarkusTransaction;
+import io.quarkus.qute.CheckedTemplate;
+import io.quarkus.qute.TemplateInstance;
+import jakarta.persistence.PersistenceException;
+import jakarta.transaction.Transactional;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.core.Response;
 
 /**
+ * Migrated from a Spring MVC {@code @Controller @RequestMapping("/owners/{ownerId}")} to a
+ * JAX-RS resource rendering Qute templates.
+ *
  * @author Juergen Hoeller
  * @author Ken Krebs
  * @author Arjen Poutsma
  * @author Wick Dynex
  */
-@Controller
-@RequestMapping("/owners/{ownerId}")
-class PetController {
+@Path("/owners")
+@Produces(MediaType.TEXT_HTML)
+public class PetController {
 
-	private static final String VIEWS_PETS_CREATE_OR_UPDATE_FORM = "pets/createOrUpdatePetForm";
+	@CheckedTemplate(basePath = "pets")
+	public static class Templates {
 
-	private final OwnerRepository owners;
+		public static native TemplateInstance createOrUpdatePetForm(Owner owner, Pet pet, List<PetType> types,
+				FormErrors errors);
 
-	private final PetTypeRepository types;
-
-	public PetController(OwnerRepository owners, PetTypeRepository types) {
-		this.owners = owners;
-		this.types = types;
 	}
 
-	@ModelAttribute("types")
-	public Collection<PetType> populatePetTypes() {
-		return this.types.findPetTypes();
-	}
+	private final PetTypeFormatter petTypeFormatter = new PetTypeFormatter();
 
-	@ModelAttribute("owner")
-	public Owner findOwner(@PathVariable("ownerId") int ownerId) {
-		Optional<Owner> optionalOwner = this.owners.findById(ownerId);
-		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
-				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
-		return owner;
-	}
+	private final PetValidator petValidator = new PetValidator();
 
-	@ModelAttribute("pet")
-	public Pet findPet(@PathVariable("ownerId") int ownerId,
-			@PathVariable(name = "petId", required = false) Integer petId) {
-
-		if (petId == null) {
-			return new Pet();
+	/**
+	 * Binds the editable pet fields (replaces Spring data binding,
+	 * {@code @InitBinder("pet")} with {@code setDisallowedFields("id", "*.id")} and the
+	 * {@link PetTypeFormatter} conversion). Conversion failures are reported as
+	 * {@code typeMismatch} errors, like Spring does.
+	 */
+	void bind(Pet pet, MultivaluedMap<String, String> form, FormErrors errors) {
+		if (form.containsKey("name")) {
+			pet.name = form.getFirst("name");
 		}
-
-		Optional<Owner> optionalOwner = this.owners.findById(ownerId);
-		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
-				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
-		return owner.getPet(petId);
+		if (form.containsKey("birthDate")) {
+			String value = form.getFirst("birthDate");
+			if (value == null || value.isBlank()) {
+				pet.birthDate = null;
+			}
+			else {
+				try {
+					pet.birthDate = LocalDate.parse(value.strip());
+				}
+				catch (DateTimeParseException ex) {
+					pet.birthDate = null;
+					errors.rejectValue("birthDate", "typeMismatch", Messages.get("typeMismatch.birthDate"));
+				}
+			}
+		}
+		if (form.containsKey("type")) {
+			String value = form.getFirst("type");
+			if (value == null || value.isBlank()) {
+				pet.type = null;
+			}
+			else {
+				try {
+					pet.type = petTypeFormatter.parse(value, Messages.currentLocale());
+				}
+				catch (ParseException ex) {
+					errors.rejectValue("type", "typeMismatch", Messages.get("notFound"));
+				}
+			}
+		}
 	}
 
-	@InitBinder("owner")
-	public void initOwnerBinder(WebDataBinder dataBinder) {
-		dataBinder.setDisallowedFields("id", "*.id");
+	private Response form(Owner owner, Pet pet, FormErrors errors) {
+		return Response.ok(Templates.createOrUpdatePetForm(owner, pet, PetType.findPetTypes(), errors)).build();
 	}
 
-	@InitBinder("pet")
-	public void initPetBinder(WebDataBinder dataBinder) {
-		dataBinder.setValidator(new PetValidator());
-		dataBinder.setDisallowedFields("id", "*.id");
-	}
-
-	@GetMapping("/pets/new")
-	public String initCreationForm(Owner owner, ModelMap model) {
+	@GET
+	@Path("/{ownerId}/pets/new")
+	public TemplateInstance initCreationForm(@PathParam("ownerId") int ownerId) {
+		Owner owner = OwnerController.findOwner(ownerId);
 		Pet pet = new Pet();
-		owner.addPet(pet);
-		return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
+		// REMOVED: owner.addPet(pet) from the Spring version; it only mutated the
+		// request-scoped model and has no visible effect on the rendered form.
+		return Templates.createOrUpdatePetForm(owner, pet, PetType.findPetTypes(), new FormErrors());
 	}
 
-	@PostMapping("/pets/new")
-	public String processCreationForm(Owner owner, @Valid Pet pet, BindingResult result,
-			RedirectAttributes redirectAttributes) {
+	@POST
+	@Path("/{ownerId}/pets/new")
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+	@Transactional
+	public Response processCreationForm(@PathParam("ownerId") int ownerId, MultivaluedMap<String, String> form) {
+		Owner owner = OwnerController.findOwner(ownerId);
+		Pet pet = new Pet();
+		FormErrors errors = new FormErrors();
+		bind(pet, form, errors);
+		petValidator.validate(pet, errors);
 
-		if (StringUtils.hasText(pet.getName()) && pet.isNew() && owner.getPet(pet.getName(), true) != null) {
-			result.rejectValue("name", "duplicate", "already exists");
+		if (PetValidator.hasText(pet.name) && pet.isNew() && owner.getPet(pet.name, true) != null) {
+			errors.rejectValue("name", "duplicate");
 		}
 
 		LocalDate currentDate = LocalDate.now();
-		if (pet.getBirthDate() != null && pet.getBirthDate().isAfter(currentDate)) {
-			result.rejectValue("birthDate", "typeMismatch.birthDate");
+		if (pet.birthDate != null && pet.birthDate.isAfter(currentDate)) {
+			errors.rejectValue("birthDate", "typeMismatch.birthDate");
 		}
 
-		if (result.hasErrors()) {
-			return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
+		if (errors.hasErrors()) {
+			return form(owner, pet, errors);
 		}
 
 		try {
 			owner.addPet(pet);
-			this.owners.saveAndFlush(owner);
+			Owner.flush(); // was owners.saveAndFlush(owner)
 		}
-		catch (DataIntegrityViolationException ex) {
+		catch (PersistenceException ex) {
 			if (!isDuplicatePetNameViolation(ex)) {
 				throw ex;
 			}
-			result.rejectValue("name", "duplicate", "already exists");
-			return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
+			QuarkusTransaction.setRollbackOnly();
+			owner.getPets().remove(pet);
+			errors.rejectValue("name", "duplicate");
+			return form(owner, pet, errors);
 		}
-		redirectAttributes.addFlashAttribute("message", "New Pet has been Added");
-		return "redirect:/owners/{ownerId}";
+		return Flash.redirect("/owners/" + ownerId, Flash.MESSAGE, "New Pet has been Added");
 	}
 
-	@GetMapping("/pets/{petId}/edit")
-	public String initUpdateForm() {
-		return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
+	@GET
+	@Path("/{ownerId}/pets/{petId}/edit")
+	public TemplateInstance initUpdateForm(@PathParam("ownerId") int ownerId, @PathParam("petId") int petId) {
+		Owner owner = OwnerController.findOwner(ownerId);
+		Pet pet = owner.getPet(petId);
+		if (pet == null) {
+			throw new IllegalArgumentException("Pet with id " + petId + " not found for owner with id " + ownerId + ".");
+		}
+		return Templates.createOrUpdatePetForm(owner, pet, PetType.findPetTypes(), new FormErrors());
 	}
 
-	@PostMapping("/pets/{petId}/edit")
-	public String processUpdateForm(Owner owner, @Valid Pet pet, BindingResult result,
-			RedirectAttributes redirectAttributes) {
+	@POST
+	@Path("/{ownerId}/pets/{petId}/edit")
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+	@Transactional
+	public Response processUpdateForm(@PathParam("ownerId") int ownerId, @PathParam("petId") int petId,
+			MultivaluedMap<String, String> form) {
+		Owner owner = OwnerController.findOwner(ownerId);
 
-		String petName = pet.getName();
+		// Spring bound the request onto the pet loaded by @ModelAttribute("pet"); bind
+		// onto a detached copy so that invalid input never reaches the managed entity.
+		Pet pet = new Pet();
+		pet.id = petId;
+		Pet current = owner.getPet(petId);
+		if (current != null) {
+			pet.name = current.name;
+			pet.birthDate = current.birthDate;
+			pet.type = current.type;
+		}
+		FormErrors errors = new FormErrors();
+		bind(pet, form, errors);
+		petValidator.validate(pet, errors);
+
+		String petName = pet.name;
 
 		// checking if the pet name already exists for the owner
-		if (StringUtils.hasText(petName)) {
+		if (PetValidator.hasText(petName)) {
 			Pet existingPet = owner.getPet(petName, false);
-			if (existingPet != null && !Objects.equals(existingPet.getId(), pet.getId())) {
-				result.rejectValue("name", "duplicate", "already exists");
+			if (existingPet != null && !Objects.equals(existingPet.id, pet.id)) {
+				errors.rejectValue("name", "duplicate");
 			}
 		}
 
 		LocalDate currentDate = LocalDate.now();
-		if (pet.getBirthDate() != null && pet.getBirthDate().isAfter(currentDate)) {
-			result.rejectValue("birthDate", "typeMismatch.birthDate");
+		if (pet.birthDate != null && pet.birthDate.isAfter(currentDate)) {
+			errors.rejectValue("birthDate", "typeMismatch.birthDate");
 		}
 
-		if (result.hasErrors()) {
-			return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
+		if (errors.hasErrors()) {
+			return form(owner, pet, errors);
 		}
 
 		try {
 			updatePetDetails(owner, pet);
 		}
-		catch (DataIntegrityViolationException ex) {
+		catch (PersistenceException ex) {
 			if (!isDuplicatePetNameViolation(ex)) {
 				throw ex;
 			}
-			result.rejectValue("name", "duplicate", "already exists");
-			return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
+			QuarkusTransaction.setRollbackOnly();
+			errors.rejectValue("name", "duplicate");
+			return form(owner, pet, errors);
 		}
-		redirectAttributes.addFlashAttribute("message", "Pet details has been edited");
-		return "redirect:/owners/{ownerId}";
+		return Flash.redirect("/owners/" + ownerId, Flash.MESSAGE, "Pet details has been edited");
 	}
 
 	/**
@@ -184,24 +232,40 @@ class PetController {
 	 * @param pet The pet with updated details
 	 */
 	private void updatePetDetails(Owner owner, Pet pet) {
-		Integer id = pet.getId();
-		Assert.state(id != null, "'pet.getId()' must not be null");
+		Integer id = pet.id;
+		if (id == null) {
+			// was org.springframework.util.Assert.state
+			throw new IllegalStateException("'pet.getId()' must not be null");
+		}
 		Pet existingPet = owner.getPet(id);
 		if (existingPet != null) {
 			// Update existing pet's properties
-			existingPet.setName(pet.getName());
-			existingPet.setBirthDate(pet.getBirthDate());
-			existingPet.setType(pet.getType());
+			existingPet.name = pet.name;
+			existingPet.birthDate = pet.birthDate;
+			existingPet.type = pet.type;
 		}
 		else {
+			pet.id = null;
 			owner.addPet(pet);
 		}
-		this.owners.saveAndFlush(owner);
+		Owner.flush(); // was owners.saveAndFlush(owner)
 	}
 
-	private boolean isDuplicatePetNameViolation(DataIntegrityViolationException ex) {
-		String message = ex.getMessage();
-		return message != null && message.toLowerCase().contains("unique_owner_pet_name");
+	/**
+	 * Was {@code isDuplicatePetNameViolation(DataIntegrityViolationException)}. Hibernate
+	 * reports the database constraint name somewhere in the cause chain.
+	 */
+	static boolean isDuplicatePetNameViolation(Throwable ex) {
+		for (Throwable t = ex; t != null; t = t.getCause()) {
+			String message = t.getMessage();
+			if (message != null && message.toLowerCase().contains("unique_owner_pet_name")) {
+				return true;
+			}
+			if (t.getCause() == t) {
+				break;
+			}
+		}
+		return false;
 	}
 
 }

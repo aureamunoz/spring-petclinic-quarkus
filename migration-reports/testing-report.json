@@ -1,0 +1,25 @@
+{
+  "module": "testing",
+  "status": "SUCCESS",
+  "timestamp": "2026-11-06T15:59:31Z",
+  "tests_run": 82,
+  "failures": 0,
+  "skipped": 5,
+  "skipped_detail": [
+    "MySqlIntegrationTests (2) and PostgresIntegrationTests (2): no Docker-API runtime for Dev Services",
+    "OwnerControllerTests.processUpdateOwnerFormWithIdMismatch: @Disabled with TODO"
+  ],
+  "files_removed": [
+    "MysqlTestApplication.java"
+  ],
+  "files_created": [
+    "DockerAvailable.java"
+  ],
+  "fixes": [
+    {
+      "file": "service/ClinicServiceTests.java",
+      "error": "IllegalStateException: This method is normally automatically overridden",
+      "fix": "Owner::flush method reference replaced with lambda () -> Owner.flush()"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,32 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.samples.petclinic.owner;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.time.LocalDate;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledInNativeImage;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.validation.Errors;
-import org.springframework.validation.MapBindingResult;
-
-import java.time.LocalDate;
-import java.util.HashMap;
-
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.springframework.samples.petclinic.system.FormErrors;
 
 /**
  * Test class for {@link PetValidator}
  *
  * @author Wick Dynex
  */
-@ExtendWith(MockitoExtension.class)
-@DisabledInNativeImage
-class PetValidatorTests {
+public class PetValidatorTests {
 
 	private PetValidator petValidator;
 
@@ -46,7 +38,7 @@ class PetValidatorTests {
 
 	private PetType petType;
 
-	private Errors errors;
+	private FormErrors errors;
 
 	private static final String petName = "Buddy";
 
@@ -59,7 +51,7 @@ class PetValidatorTests {
 		petValidator = new PetValidator();
 		pet = new Pet();
 		petType = new PetType();
-		errors = new MapBindingResult(new HashMap<>(), "pet");
+		errors = new FormErrors(); // was MapBindingResult
 	}
 
 	@Test
@@ -74,10 +66,10 @@ class PetValidatorTests {
 
 	@Test
 	void validate() {
-		petType.setName(petTypeName);
-		pet.setName(petName);
-		pet.setType(petType);
-		pet.setBirthDate(petBirthDate);
+		petType.name = petTypeName;
+		pet.name = petName;
+		pet.type = petType;
+		pet.birthDate = petBirthDate;
 
 		petValidator.validate(pet, errors);
 
@@ -89,10 +81,10 @@ class PetValidatorTests {
 
 		@Test
 		void validateWithInvalidPetName() {
-			petType.setName(petTypeName);
-			pet.setName("");
-			pet.setType(petType);
-			pet.setBirthDate(petBirthDate);
+			petType.name = petTypeName;
+			pet.name = "";
+			pet.type = petType;
+			pet.birthDate = petBirthDate;
 
 			petValidator.validate(pet, errors);
 
@@ -101,9 +93,9 @@ class PetValidatorTests {
 
 		@Test
 		void validateWithInvalidPetType() {
-			pet.setName(petName);
-			pet.setType(null);
-			pet.setBirthDate(petBirthDate);
+			pet.name = petName;
+			pet.type = null;
+			pet.birthDate = petBirthDate;
 
 			petValidator.validate(pet, errors);
 
@@ -112,10 +104,10 @@ class PetValidatorTests {
 
 		@Test
 		void validateWithInvalidBirthDate() {
-			petType.setName(petTypeName);
-			pet.setName(petName);
-			pet.setType(petType);
-			pet.setBirthDate(null);
+			petType.name = petTypeName;
+			pet.name = petName;
+			pet.type = petType;
+			pet.birthDate = null;
 
 			petValidator.validate(pet, errors);
 
@@ -124,10 +116,10 @@ class PetValidatorTests {
 
 		@Test
 		void validateWithLongPetName() {
-			petType.setName(petTypeName);
-			pet.setName("A".repeat(31));
-			pet.setType(petType);
-			pet.setBirthDate(petBirthDate);
+			petType.name = petTypeName;
+			pet.name = "A".repeat(31);
+			pet.type = petType;
+			pet.birthDate = petBirthDate;
 
 			petValidator.validate(pet, errors);
 

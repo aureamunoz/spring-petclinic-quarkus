@@ -13,27 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.springframework.samples.petclinic.system;
 
-package org.springframework.samples.petclinic.owner;
+import java.util.Locale;
 
-import java.util.List;
-
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
+import jakarta.enterprise.context.RequestScoped;
 
 /**
- * Repository class for <code>PetType</code> domain objects.
- *
- * @author Patrick Baumgartner
+ * Holds the locale of the current HTTP request. Populated by {@link LocaleFilters}.
  */
+@RequestScoped
+public class CurrentLocale {
 
-public interface PetTypeRepository extends JpaRepository<PetType, Integer> {
+	private Locale locale = Messages.DEFAULT_LOCALE;
 
-	/**
-	 * Retrieve all {@link PetType}s from the data store.
-	 * @return a Collection of {@link PetType}s.
-	 */
-	@Query("SELECT ptype FROM PetType ptype ORDER BY ptype.name")
-	List<PetType> findPetTypes();
+	private boolean changed;
+
+	public Locale getLocale() {
+		return locale;
+	}
+
+	void setLocale(Locale locale, boolean changed) {
+		this.locale = locale;
+		this.changed = changed;
+	}
+
+	boolean isChanged() {
+		return changed;
+	}
 
 }

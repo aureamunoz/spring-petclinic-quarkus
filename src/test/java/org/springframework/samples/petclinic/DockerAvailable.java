@@ -13,24 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.samples.petclinic;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.ImportRuntimeHints;
-
 /**
- * PetClinic Spring Boot Application.
- *
- * @author Dave Syer
+ * JUnit {@code @EnabledIf} condition replacing
+ * {@code @Testcontainers(disabledWithoutDocker = true)}: database integration tests rely on
+ * Quarkus Dev Services, which need a working container runtime.
  */
-@SpringBootApplication
-@ImportRuntimeHints(PetClinicRuntimeHints.class)
-public class PetClinicApplication {
+public final class DockerAvailable {
 
-	public static void main(String[] args) {
-		SpringApplication.run(PetClinicApplication.class, args);
+	private DockerAvailable() {
+	}
+
+	public static boolean isDockerAvailable() {
+		try {
+			Class<?> factory = Class.forName("org.testcontainers.DockerClientFactory");
+			Object instance = factory.getMethod("instance").invoke(null);
+			return (Boolean) factory.getMethod("isDockerAvailable").invoke(instance);
+		}
+		catch (Throwable ex) {
+			return false;
+		}
 	}
 
 }

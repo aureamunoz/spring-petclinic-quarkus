@@ -13,50 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.samples.petclinic;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static io.restassured.RestAssured.given;
+
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledInNativeImage;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.restclient.RestTemplateBuilder;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
-import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.RequestEntity;
-import org.springframework.http.ResponseEntity;
-import org.springframework.samples.petclinic.vet.VetRepository;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.aot.DisabledInAotMode;
-import org.springframework.web.client.RestTemplate;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mysql.MySQLContainer;
-import org.testcontainers.utility.DockerImageName;
+import org.junit.jupiter.api.condition.EnabledIf;
+import org.springframework.samples.petclinic.vet.VetService;
 
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("mysql")
-@Testcontainers(disabledWithoutDocker = true)
-@DisabledInNativeImage
-@DisabledInAotMode
+import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.QuarkusTestProfile;
+import io.quarkus.test.junit.TestProfile;
+import jakarta.inject.Inject;
+
+/**
+ * Runs against a MySQL database started by Quarkus Dev Services (replaces the Spring
+ * Testcontainers {@code @ServiceConnection MySQLContainer}). Disabled when no container
+ * runtime is available, like the Spring version.
+ */
+@QuarkusTest
+@TestProfile(MySqlIntegrationTests.MySqlProfile.class)
+@EnabledIf("org.springframework.samples.petclinic.DockerAvailable#isDockerAvailable")
 class MySqlIntegrationTests {
 
-	@ServiceConnection
-	@Container
-	static MySQLContainer container = new MySQLContainer(DockerImageName.parse("mysql:9.7"));
+	public static class MySqlProfile implements QuarkusTestProfile {
 
-	@LocalServerPort
-	int port;
+		@Override
+		public Map<String, String> getConfigOverrides() {
+			// db-kind is a build-time property: test profiles re-augment the application
+			return Map.of("quarkus.datasource.db-kind", "mysql", "quarkus.datasource.devservices.image-name",
+					"mysql:9.7", "quarkus.flyway.locations", "db/migration/mysql");
+		}
 
-	@Autowired
-	private VetRepository vets;
+	}
 
-	@Autowired
-	private RestTemplateBuilder builder;
+	@Inject
+	VetService vets;
 
 	@Test
 	void findAll() {
@@ -66,9 +60,7 @@ class MySqlIntegrationTests {
 
 	@Test
 	void ownerDetails() {
-		RestTemplate template = builder.baseUri("http://localhost:" + port).build();
-		ResponseEntity<String> result = template.exchange(RequestEntity.get("/owners/1").build(), String.class);
-		assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+		given().when().get("/owners/1").then().statusCode(200);
 	}
 
 }

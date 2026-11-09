@@ -1,0 +1,28 @@
+{
+  "generatedAt": "2026-11-06T15:40:49Z",
+  "source": "/Users/auri/tmp/gotechworld-demo/spring-petclinic",
+  "target": "/Users/auri/tmp/gotechworld-demo/spring-petclinic-quarkus",
+  "currentModule": null,
+  "completedModules": [
+    "prerequisite",
+    "planning",
+    "build",
+    "persistence",
+    "code",
+    "frontend",
+    "testing",
+    "cleanup",
+    "reporting"
+  ],
+  "moduleReports": {
+    "prerequisite": "migration-reports/prerequisite-report.json",
+    "planning": "migration-reports/planning-report.json",
+    "build": "migration-reports/build-report.json",
+    "persistence": "migration-reports/persistence-report.json",
+    "code": "migration-reports/code-report.json",
+    "frontend": "migration-reports/frontend-report.json",
+    "testing": "migration-reports/testing-report.json",
+    "cleanup": "migration-reports/cleanup-report.json",
+    "reporting": "migration-reports/reporting-report.json"
+  }
+}

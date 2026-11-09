@@ -13,31 +13,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.samples.petclinic.system;
 
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
+
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledInNativeImage;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.test.context.aot.DisabledInAotMode;
-import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+import io.quarkus.test.junit.QuarkusTest;
 
-@WebMvcTest(WelcomeController.class)
-@DisabledInNativeImage
-@DisabledInAotMode
+/**
+ * Test class for {@link WelcomeController}
+ */
+@QuarkusTest
 class WelcomeControllerTests {
 
-	@Autowired
-	private MockMvc mockMvc;
+	@Test
+	void welcome() {
+		given().when().get("/").then().statusCode(200).body(containsString("<h2>Welcome</h2>"));
+	}
 
 	@Test
-	void welcome() throws Exception {
-		mockMvc.perform(get("/")).andExpect(status().isOk()).andExpect(view().name("welcome"));
+	void welcomeInGermanIsRemembered() {
+		String cookie = given().queryParam("lang", "de")
+			.when()
+			.get("/")
+			.then()
+			.statusCode(200)
+			.body(containsString("<h2>Willkommen</h2>"))
+			.extract()
+			.cookie("petclinic-lang");
+		given().cookie("petclinic-lang", cookie)
+			.when()
+			.get("/")
+			.then()
+			.body(containsString("<h2>Willkommen</h2>"));
 	}
 
 }

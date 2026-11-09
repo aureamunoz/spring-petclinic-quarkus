@@ -1,0 +1,12 @@
+{
+  "module": "planning",
+  "status": "SUCCESS",
+  "timestamp": "2026-11-06T15:45:09Z",
+  "files_created": [
+    "migration-spec.yaml"
+  ],
+  "notes": [
+    "Mode: autonomous (user instruction 'Proceed autonomously'); strategy, java_version, persistence from arguments; others defaulted",
+    "Quarkus 3.40.1.1 = recommended LTS stream from code.quarkus.io/api/streams"
+  ]
+}

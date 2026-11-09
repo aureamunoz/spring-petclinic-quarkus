@@ -34,7 +34,6 @@ public class I18nPropertiesSyncTest {
 
 	private static final Pattern BRACKET_ONLY = Pattern.compile("<[^>]*>\\s*[\\[\\]](?:&nbsp;)?\\s*</[^>]*>");
 
-	private static final Pattern HAS_TH_TEXT_ATTRIBUTE = Pattern.compile("th:(u)?text\\s*=\\s*\"[^\"]+\"");
 
 	@Test
 	void checkNonInternationalizedStrings() throws Exception {
@@ -62,10 +61,9 @@ public class I18nPropertiesSyncTest {
 
 				if (file.toString().endsWith(".html")) {
 					boolean hasLiteralText = HTML_TEXT_LITERAL.matcher(line).find();
-					boolean hasThTextAttribute = HAS_TH_TEXT_ATTRIBUTE.matcher(line).find();
 					boolean isBracketOnly = BRACKET_ONLY.matcher(line).find();
 
-					if (hasLiteralText && !line.contains("#{") && !hasThTextAttribute && !isBracketOnly) {
+					if (hasLiteralText && !line.contains("{msg:") && !isBracketOnly) {
 						report.append("HTML: ")
 							.append(file)
 							.append(" Line ")

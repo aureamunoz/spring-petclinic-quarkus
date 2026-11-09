@@ -17,7 +17,6 @@ package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
 
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.samples.petclinic.model.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -36,35 +35,20 @@ import jakarta.validation.constraints.Size;
 @Table(name = "visits")
 public class Visit extends BaseEntity {
 
+	// REMOVED: @DateTimeFormat(pattern = "yyyy-MM-dd") (Spring MVC binding). Form values are
+	// parsed as ISO-8601 (yyyy-MM-dd) by VisitResource.
 	@Column(name = "visit_date")
-	@DateTimeFormat(pattern = "yyyy-MM-dd")
-	private LocalDate date;
+	public LocalDate date;
 
 	@NotBlank
 	@Size(max = 255)
-	private String description;
+	public String description;
 
 	/**
 	 * Creates a new instance of Visit for tomorrow
 	 */
 	public Visit() {
 		this.date = LocalDate.now().plusDays(1);
-	}
-
-	public LocalDate getDate() {
-		return this.date;
-	}
-
-	public void setDate(LocalDate date) {
-		this.date = date;
-	}
-
-	public String getDescription() {
-		return this.description;
-	}
-
-	public void setDescription(String description) {
-		this.description = description;
 	}
 
 }

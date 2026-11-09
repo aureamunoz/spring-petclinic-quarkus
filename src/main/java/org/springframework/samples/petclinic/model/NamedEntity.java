@@ -32,19 +32,11 @@ public class NamedEntity extends BaseEntity {
 
 	@Column
 	@NotBlank
-	private String name;
-
-	public String getName() {
-		return this.name;
-	}
-
-	public void setName(String name) {
-		this.name = name;
-	}
+	public String name;
 
 	@Override
 	public String toString() {
-		String name = this.getName();
+		String name = this.name;
 		return name != null ? name : "<null>";
 	}
 

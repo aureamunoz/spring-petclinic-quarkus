@@ -13,260 +13,222 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.samples.petclinic.owner;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledInNativeImage;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.FilterType;
-import org.springframework.test.context.aot.DisabledInAotMode;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
+import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.endsWith;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
 
-import org.springframework.dao.DataIntegrityViolationException;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+import io.quarkus.test.junit.QuarkusTest;
+import jakarta.persistence.PersistenceException;
 
 /**
  * Test class for the {@link PetController}
+ * <p>
+ * Migrated from a {@code @WebMvcTest} slice with mocked repositories to a
+ * {@code @QuarkusTest} with REST Assured against the seeded H2 database.
  *
  * @author Colin But
  * @author Wick Dynex
  */
-@WebMvcTest(value = PetController.class,
-		includeFilters = @ComponentScan.Filter(value = PetTypeFormatter.class, type = FilterType.ASSIGNABLE_TYPE))
-@DisabledInNativeImage
-@DisabledInAotMode
+@QuarkusTest
 class PetControllerTests {
 
-	private static final int TEST_OWNER_ID = 1;
+	// Eduardo Rodriquez: pets Rosy (id 3) and Jewel (id 4)
+	private static final int TEST_OWNER_ID = 3;
 
-	private static final int TEST_PET_ID = 1;
+	private static final int TEST_PET_ID = 3;
 
-	@Autowired
-	private MockMvc mockMvc;
+	// Peter McTavish: pet George (id 6), Jeff Black: pet Lucky (id 9)
+	private static final int SAME_NAME_OWNER_ID = 5;
 
-	@MockitoBean
-	private OwnerRepository owners;
+	private static final int SAME_NAME_PET_ID = 6;
 
-	@MockitoBean
-	private PetTypeRepository types;
+	private static final int UPDATABLE_OWNER_ID = 7;
 
-	@BeforeEach
-	void setup() {
-		PetType cat = new PetType();
-		cat.setId(3);
-		cat.setName("hamster");
-		given(this.types.findPetTypes()).willReturn(List.of(cat));
+	private static final int UPDATABLE_PET_ID = 9;
 
-		Owner owner = new Owner();
-		Pet pet = new Pet();
-		Pet dog = new Pet();
-		owner.addPet(pet);
-		owner.addPet(dog);
-		pet.setId(TEST_PET_ID);
-		dog.setId(TEST_PET_ID + 1);
-		pet.setName("petty");
-		dog.setName("doggy");
-		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
+	private static final String FORM = "id=\"name\"";
+
+	@Test
+	void initCreationForm() {
+		given().when()
+			.get("/owners/{ownerId}/pets/new", TEST_OWNER_ID)
+			.then()
+			.statusCode(200)
+			.body(containsString(FORM))
+			.body(containsString("Add Pet"));
 	}
 
 	@Test
-	void initCreationForm() throws Exception {
-		mockMvc.perform(get("/owners/{ownerId}/pets/new", TEST_OWNER_ID))
-			.andExpect(status().isOk())
-			.andExpect(view().name("pets/createOrUpdatePetForm"))
-			.andExpect(model().attributeExists("pet"));
-	}
-
-	@Test
-	void processCreationFormSuccess() throws Exception {
-		mockMvc
-			.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).param("name", "Betty")
-				.param("type", "hamster")
-				.param("birthDate", "2015-02-12"))
-			.andExpect(status().is3xxRedirection())
-			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	void processCreationFormSuccess() {
+		given().redirects()
+			.follow(false)
+			.formParam("name", "Betty")
+			.formParam("type", "hamster")
+			.formParam("birthDate", "2015-02-12")
+			.when()
+			.post("/owners/{ownerId}/pets/new", TEST_OWNER_ID)
+			.then()
+			.statusCode(303)
+			.header("Location", endsWith("/owners/" + TEST_OWNER_ID));
 	}
 
 	@Nested
 	class ProcessCreationFormHasErrors {
 
 		@Test
-		void processCreationFormWithBlankName() throws Exception {
-			mockMvc
-				.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).param("name", "\t \n")
-					.param("birthDate", "2015-02-12"))
-				.andExpect(model().attributeHasNoErrors("owner"))
-				.andExpect(model().attributeHasErrors("pet"))
-				.andExpect(model().attributeHasFieldErrors("pet", "name"))
-				.andExpect(model().attributeHasFieldErrorCode("pet", "name", "required"))
-				.andExpect(status().isOk())
-				.andExpect(view().name("pets/createOrUpdatePetForm"));
+		void processCreationFormWithBlankName() {
+			given().formParam("name", "\t \n")
+				.formParam("birthDate", "2015-02-12")
+				.when()
+				.post("/owners/{ownerId}/pets/new", TEST_OWNER_ID)
+				.then()
+				.statusCode(200)
+				.body(containsString(FORM))
+				.body(containsString("is required"));
 		}
 
 		@Test
-		void processCreationFormWithDuplicateName() throws Exception {
-			mockMvc
-				.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).param("name", "petty")
-					.param("birthDate", "2015-02-12"))
-				.andExpect(model().attributeHasNoErrors("owner"))
-				.andExpect(model().attributeHasErrors("pet"))
-				.andExpect(model().attributeHasFieldErrors("pet", "name"))
-				.andExpect(model().attributeHasFieldErrorCode("pet", "name", "duplicate"))
-				.andExpect(status().isOk())
-				.andExpect(view().name("pets/createOrUpdatePetForm"));
+		void processCreationFormWithDuplicateName() {
+			given().formParam("name", "Rosy")
+				.formParam("type", "dog")
+				.formParam("birthDate", "2015-02-12")
+				.when()
+				.post("/owners/{ownerId}/pets/new", TEST_OWNER_ID)
+				.then()
+				.statusCode(200)
+				.body(containsString(FORM))
+				.body(containsString("is already in use"));
 		}
 
 		@Test
-		void processCreationFormWithMissingPetType() throws Exception {
-			mockMvc
-				.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).param("name", "Betty")
-					.param("birthDate", "2015-02-12"))
-				.andExpect(model().attributeHasNoErrors("owner"))
-				.andExpect(model().attributeHasErrors("pet"))
-				.andExpect(model().attributeHasFieldErrors("pet", "type"))
-				.andExpect(model().attributeHasFieldErrorCode("pet", "type", "required"))
-				.andExpect(status().isOk())
-				.andExpect(view().name("pets/createOrUpdatePetForm"));
+		void processCreationFormWithMissingPetType() {
+			given().formParam("name", "Fido")
+				.formParam("birthDate", "2015-02-12")
+				.when()
+				.post("/owners/{ownerId}/pets/new", TEST_OWNER_ID)
+				.then()
+				.statusCode(200)
+				.body(containsString(FORM))
+				.body(containsString("is required"));
 		}
 
 		@Test
-		void processCreationFormWithInvalidBirthDate() throws Exception {
-			LocalDate currentDate = LocalDate.now();
-			String futureBirthDate = currentDate.plusMonths(1).toString();
+		void processCreationFormWithInvalidBirthDate() {
+			String futureBirthDate = LocalDate.now().plusMonths(1).toString();
+			given().formParam("name", "Fido")
+				.formParam("type", "dog")
+				.formParam("birthDate", futureBirthDate)
+				.when()
+				.post("/owners/{ownerId}/pets/new", TEST_OWNER_ID)
+				.then()
+				.statusCode(200)
+				.body(containsString(FORM))
+				.body(containsString("invalid date"));
+		}
 
-			mockMvc
-				.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).param("name", "Betty")
-					.param("birthDate", futureBirthDate))
-				.andExpect(model().attributeHasNoErrors("owner"))
-				.andExpect(model().attributeHasErrors("pet"))
-				.andExpect(model().attributeHasFieldErrors("pet", "birthDate"))
-				.andExpect(model().attributeHasFieldErrorCode("pet", "birthDate", "typeMismatch.birthDate"))
-				.andExpect(status().isOk())
-				.andExpect(view().name("pets/createOrUpdatePetForm"));
+		/**
+		 * Was {@code processCreationFormWithDataIntegrityViolation}, which mocked
+		 * {@code saveAndFlush} to throw. Panache static methods cannot be mocked with
+		 * {@code @InjectMock}; the real database path is covered by
+		 * {@code PetClinicConcurrencyTests}, and the exception classification is tested
+		 * here.
+		 */
+		@Test
+		void duplicatePetNameViolationIsDetected() {
+			PersistenceException ex = new PersistenceException("could not execute statement",
+					new RuntimeException("Unique index or primary key violation: \"PUBLIC.UNIQUE_OWNER_PET_NAME\""));
+			assertThat(PetController.isDuplicatePetNameViolation(ex)).isTrue();
+			assertThat(PetController.isDuplicatePetNameViolation(new PersistenceException("other"))).isFalse();
 		}
 
 		@Test
-		void processCreationFormWithDataIntegrityViolation() throws Exception {
-			given(owners.saveAndFlush(any(Owner.class)))
-				.willThrow(new DataIntegrityViolationException("Duplicate key: unique_owner_pet_name"));
-			mockMvc
-				.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).param("name", "Betty")
-					.param("type", "hamster")
-					.param("birthDate", "2015-02-12"))
-				.andExpect(model().attributeHasNoErrors("owner"))
-				.andExpect(model().attributeHasErrors("pet"))
-				.andExpect(model().attributeHasFieldErrors("pet", "name"))
-				.andExpect(model().attributeHasFieldErrorCode("pet", "name", "duplicate"))
-				.andExpect(status().isOk())
-				.andExpect(view().name("pets/createOrUpdatePetForm"));
-		}
-
-		@Test
-		void initUpdateForm() throws Exception {
-			mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID))
-				.andExpect(status().isOk())
-				.andExpect(model().attributeExists("pet"))
-				.andExpect(view().name("pets/createOrUpdatePetForm"));
+		void initUpdateForm() {
+			given().when()
+				.get("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID)
+				.then()
+				.statusCode(200)
+				.body(containsString(FORM))
+				.body(containsString("value=\"Rosy\""))
+				.body(containsString("Update Pet"));
 		}
 
 	}
 
 	@Test
-	void processUpdateFormSuccess() throws Exception {
-		mockMvc
-			.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).param("name", "Betty")
-				.param("type", "hamster")
-				.param("birthDate", "2015-02-12"))
-			.andExpect(status().is3xxRedirection())
-			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	void processUpdateFormSuccess() {
+		given().redirects()
+			.follow(false)
+			.formParam("name", "Lucky2")
+			.formParam("type", "hamster")
+			.formParam("birthDate", "2015-02-12")
+			.when()
+			.post("/owners/{ownerId}/pets/{petId}/edit", UPDATABLE_OWNER_ID, UPDATABLE_PET_ID)
+			.then()
+			.statusCode(303)
+			.header("Location", endsWith("/owners/" + UPDATABLE_OWNER_ID));
 	}
 
 	@Test
-	void processUpdateFormWithSameName() throws Exception {
-		mockMvc.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).param("name", "petty") // same
-																														// name
-																														// as
-																														// existing
-																														// pet
-			.param("type", "hamster")
-			.param("birthDate", "2015-02-12"))
-			.andExpect(status().is3xxRedirection())
-			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	void processUpdateFormWithSameName() {
+		given().redirects()
+			.follow(false)
+			.formParam("name", "George") // same name as existing pet
+			.formParam("type", "snake")
+			.formParam("birthDate", "2010-01-20")
+			.when()
+			.post("/owners/{ownerId}/pets/{petId}/edit", SAME_NAME_OWNER_ID, SAME_NAME_PET_ID)
+			.then()
+			.statusCode(303)
+			.header("Location", endsWith("/owners/" + SAME_NAME_OWNER_ID));
 	}
 
 	@Nested
 	class ProcessUpdateFormHasErrors {
 
 		@Test
-		void processUpdateFormWithDuplicateName() throws Exception {
-			mockMvc
-				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID + 1)
-					.param("name", "petty")
-					.param("type", "hamster")
-					.param("birthDate", "2015-02-12"))
-				.andExpect(model().attributeHasNoErrors("owner"))
-				.andExpect(model().attributeHasErrors("pet"))
-				.andExpect(model().attributeHasFieldErrors("pet", "name"))
-				.andExpect(model().attributeHasFieldErrorCode("pet", "name", "duplicate"))
-				.andExpect(status().isOk())
-				.andExpect(view().name("pets/createOrUpdatePetForm"));
+		void processUpdateFormWithDuplicateName() {
+			// rename Jewel (id 4) to Rosy, the name of the owner's other pet
+			given().formParam("name", "Rosy")
+				.formParam("type", "dog")
+				.formParam("birthDate", "2015-02-12")
+				.when()
+				.post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID + 1)
+				.then()
+				.statusCode(200)
+				.body(containsString(FORM))
+				.body(containsString("is already in use"));
 		}
 
 		@Test
-		void processUpdateFormWithInvalidBirthDate() throws Exception {
-			mockMvc
-				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).param("name", " ")
-					.param("birthDate", "2015/02/12"))
-				.andExpect(model().attributeHasNoErrors("owner"))
-				.andExpect(model().attributeHasErrors("pet"))
-				.andExpect(model().attributeHasFieldErrors("pet", "birthDate"))
-				.andExpect(model().attributeHasFieldErrorCode("pet", "birthDate", "typeMismatch"))
-				.andExpect(view().name("pets/createOrUpdatePetForm"));
+		void processUpdateFormWithInvalidBirthDate() {
+			given().formParam("name", " ")
+				.formParam("birthDate", "2015/02/12")
+				.when()
+				.post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID)
+				.then()
+				.statusCode(200)
+				.body(containsString(FORM))
+				.body(containsString("invalid date"));
 		}
 
 		@Test
-		void processUpdateFormWithBlankName() throws Exception {
-			mockMvc
-				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).param("name", "  ")
-					.param("birthDate", "2015-02-12"))
-				.andExpect(model().attributeHasNoErrors("owner"))
-				.andExpect(model().attributeHasErrors("pet"))
-				.andExpect(model().attributeHasFieldErrors("pet", "name"))
-				.andExpect(model().attributeHasFieldErrorCode("pet", "name", "required"))
-				.andExpect(view().name("pets/createOrUpdatePetForm"));
-		}
-
-		@Test
-		void processUpdateFormWithDataIntegrityViolation() throws Exception {
-			given(owners.saveAndFlush(any(Owner.class)))
-				.willThrow(new DataIntegrityViolationException("Duplicate key: unique_owner_pet_name"));
-			mockMvc
-				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).param("name", "Betty")
-					.param("type", "hamster")
-					.param("birthDate", "2015-02-12"))
-				.andExpect(model().attributeHasNoErrors("owner"))
-				.andExpect(model().attributeHasErrors("pet"))
-				.andExpect(model().attributeHasFieldErrors("pet", "name"))
-				.andExpect(model().attributeHasFieldErrorCode("pet", "name", "duplicate"))
-				.andExpect(status().isOk())
-				.andExpect(view().name("pets/createOrUpdatePetForm"));
+		void processUpdateFormWithBlankName() {
+			given().formParam("name", "  ")
+				.formParam("birthDate", "2015-02-12")
+				.when()
+				.post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID)
+				.then()
+				.statusCode(200)
+				.body(containsString(FORM))
+				.body(containsString("is required"));
 		}
 
 	}

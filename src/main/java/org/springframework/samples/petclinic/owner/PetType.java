@@ -15,8 +15,11 @@
  */
 package org.springframework.samples.petclinic.owner;
 
+import java.util.List;
+
 import org.springframework.samples.petclinic.model.NamedEntity;
 
+import io.quarkus.panache.common.Sort;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
@@ -26,5 +29,15 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "types")
 public class PetType extends NamedEntity {
+
+	/**
+	 * Retrieve all {@link PetType}s from the data store, ordered by name (formerly
+	 * {@code PetTypeRepository.findPetTypes()} with
+	 * {@code @Query("SELECT ptype FROM PetType ptype ORDER BY ptype.name")}).
+	 * @return a List of {@link PetType}s.
+	 */
+	public static List<PetType> findPetTypes() {
+		return listAll(Sort.by("name"));
+	}
 
 }

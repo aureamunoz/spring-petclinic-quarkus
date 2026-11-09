@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.samples.petclinic.service;
 
-import org.springframework.orm.ObjectRetrievalFailureException;
-import org.springframework.samples.petclinic.model.BaseEntity;
-
 import java.util.Collection;
+
+import org.springframework.samples.petclinic.model.BaseEntity;
 
 /**
  * Utility methods for handling entities. Separate from the BaseEntity class mainly
@@ -38,16 +36,17 @@ public abstract class EntityUtils {
 	 * @param entityClass the entity class to look up
 	 * @param entityId the entity id to look up
 	 * @return the found entity
-	 * @throws ObjectRetrievalFailureException if the entity was not found
+	 * @throws IllegalArgumentException if the entity was not found (was Spring's
+	 * {@code ObjectRetrievalFailureException})
 	 */
-	public static <T extends BaseEntity> T getById(Collection<T> entities, Class<T> entityClass, int entityId)
-			throws ObjectRetrievalFailureException {
+	public static <T extends BaseEntity> T getById(Collection<T> entities, Class<T> entityClass, int entityId) {
 		for (T entity : entities) {
-			if (entity.getId() != null && entity.getId() == entityId && entityClass.isInstance(entity)) {
+			if (entity.id != null && entity.id == entityId && entityClass.isInstance(entity)) {
 				return entity;
 			}
 		}
-		throw new ObjectRetrievalFailureException(entityClass, entityId);
+		throw new IllegalArgumentException("Object of class [" + entityClass.getName() + "] with identifier ["
+				+ entityId + "]: not found");
 	}
 
 }

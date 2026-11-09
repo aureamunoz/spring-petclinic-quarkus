@@ -1,0 +1,30 @@
+{
+  "module": "build",
+  "status": "SUCCESS",
+  "timestamp": "2026-11-06T15:59:31Z",
+  "files_modified": [
+    "pom.xml",
+    "src/main/resources/application.properties",
+    "src/main/resources/application-mysql.properties",
+    "src/main/resources/application-postgres.properties"
+  ],
+  "files_created": [
+    "src/main/resources/ValidationMessages.properties"
+  ],
+  "files_moved": [
+    "db/{h2,mysql,postgres}/schema.sql -> db/migration/<db>/V1__schema.sql",
+    "db/{h2,mysql,postgres}/data.sql -> db/migration/<db>/V2__data.sql"
+  ],
+  "plugins_removed": [
+    "spring-boot-maven-plugin",
+    "spring-javaformat-maven-plugin",
+    "native-maven-plugin",
+    "git-commit-id-maven-plugin",
+    "cyclonedx-maven-plugin"
+  ],
+  "notes": [
+    "Compile after build module failed by design: 200 errors, all Spring imports in Java sources owned by persistence/code modules",
+    "assertj-core needed an explicit version (not managed by the Quarkus BOM)",
+    "spring.sql.init replaced by Flyway (quarkus-flyway + flyway-mysql/postgresql)"
+  ]
+}

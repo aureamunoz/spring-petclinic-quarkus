@@ -15,44 +15,45 @@
  */
 package org.springframework.samples.petclinic.owner;
 
-import org.springframework.format.Formatter;
-import org.springframework.stereotype.Component;
-
 import java.text.ParseException;
 import java.util.Collection;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 /**
- * Instructs Spring MVC on how to parse and print elements of type 'PetType'. Starting
- * from Spring 3.0, Formatters have come as an improvement in comparison to legacy
- * PropertyEditors. See the following links for more details: - The Spring ref doc:
- * https://docs.spring.io/spring-framework/docs/current/spring-framework-reference/core.html#format
+ * Parses and prints elements of type 'PetType'.
+ * <p>
+ * Formerly a Spring {@code Formatter<PetType>} registered as {@code @Component} and applied
+ * automatically by Spring MVC data binding. Quarkus REST has no equivalent form-binding
+ * conversion service, so {@link PetController} calls it explicitly when binding the
+ * {@code type} form field.
  *
  * @author Mark Fisher
  * @author Juergen Hoeller
  * @author Michael Isvy
  */
-@Component
-public class PetTypeFormatter implements Formatter<PetType> {
+public class PetTypeFormatter {
 
-	private final PetTypeRepository types;
+	private final Supplier<? extends Collection<PetType>> types;
 
-	public PetTypeFormatter(PetTypeRepository types) {
+	public PetTypeFormatter() {
+		this(PetType::findPetTypes);
+	}
+
+	PetTypeFormatter(Supplier<? extends Collection<PetType>> types) {
 		this.types = types;
 	}
 
-	@Override
 	public String print(PetType petType, Locale locale) {
-		String name = petType.getName();
+		String name = petType.name;
 		return name != null ? name : "<null>";
 	}
 
-	@Override
 	public PetType parse(String text, Locale locale) throws ParseException {
-		Collection<PetType> findPetTypes = this.types.findPetTypes();
+		Collection<PetType> findPetTypes = this.types.get();
 		for (PetType type : findPetTypes) {
-			if (Objects.equals(type.getName(), text)) {
+			if (Objects.equals(type.name, text)) {
 				return type;
 			}
 		}

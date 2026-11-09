@@ -13,18 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.samples.petclinic.system;
 
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
+import io.quarkus.qute.TemplateInstance;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
 
-@Controller
-class WelcomeController {
+@Path("/")
+public class WelcomeController {
 
-	@GetMapping("/")
-	public String welcome() {
-		return "welcome";
+	@GET
+	@Produces(MediaType.TEXT_HTML)
+	public TemplateInstance welcome() {
+		return Templates.welcome();
 	}
 
 }

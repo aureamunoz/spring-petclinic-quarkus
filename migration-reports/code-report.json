@@ -1,0 +1,29 @@
+{
+  "module": "code",
+  "status": "SUCCESS",
+  "timestamp": "2026-11-06T15:59:31Z",
+  "controllers": [
+    "OwnerController",
+    "PetController",
+    "VisitController",
+    "VetController",
+    "WelcomeController",
+    "CrashController"
+  ],
+  "files_removed": [
+    "PetClinicApplication.java",
+    "PetClinicRuntimeHints.java",
+    "system/CacheConfiguration.java",
+    "system/WebConfiguration.java"
+  ],
+  "files_created": [
+    "system/Messages.java",
+    "system/CurrentLocale.java",
+    "system/LocaleFilters.java",
+    "system/FormErrors.java",
+    "system/Flash.java",
+    "system/ErrorMapper.java",
+    "system/Templates.java"
+  ],
+  "compile": "PASS"
+}

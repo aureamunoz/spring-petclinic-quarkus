@@ -13,109 +13,95 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.springframework.samples.petclinic.owner;
 
-import static org.mockito.BDDMockito.given;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledInNativeImage;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.test.context.aot.DisabledInAotMode;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.endsWith;
 
 import java.time.LocalDate;
-import java.util.Optional;
+
+import org.junit.jupiter.api.Test;
+
+import io.quarkus.test.junit.QuarkusTest;
 
 /**
  * Test class for {@link VisitController}
+ * <p>
+ * Migrated from a {@code @WebMvcTest} slice to a {@code @QuarkusTest} with REST Assured.
  *
  * @author Colin But
  * @author Wick Dynex
  */
-@WebMvcTest(VisitController.class)
-@DisabledInNativeImage
-@DisabledInAotMode
+@QuarkusTest
 class VisitControllerTests {
 
-	private static final int TEST_OWNER_ID = 1;
+	// Betty Davis and her pet Basil
+	private static final int TEST_OWNER_ID = 2;
 
-	private static final int TEST_PET_ID = 1;
+	private static final int TEST_PET_ID = 2;
 
-	@Autowired
-	private MockMvc mockMvc;
+	private static final String FORM = "Previous Visits";
 
-	@MockitoBean
-	private OwnerRepository owners;
-
-	@BeforeEach
-	void init() {
-		Owner owner = new Owner();
-		Pet pet = new Pet();
-		owner.addPet(pet);
-		pet.setId(TEST_PET_ID);
-		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
+	@Test
+	void initNewVisitForm() {
+		given().when()
+			.get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+			.then()
+			.statusCode(200)
+			.body(containsString(FORM))
+			.body(containsString("Basil"));
 	}
 
 	@Test
-	void initNewVisitForm() throws Exception {
-		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID))
-			.andExpect(status().isOk())
-			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	void processNewVisitFormSuccess() {
+		given().redirects()
+			.follow(false)
+			.formParam("name", "George")
+			.formParam("date", LocalDate.now().plusDays(1).toString())
+			.formParam("description", "Visit Description")
+			.when()
+			.post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+			.then()
+			.statusCode(303)
+			.header("Location", endsWith("/owners/" + TEST_OWNER_ID));
 	}
 
 	@Test
-	void processNewVisitFormSuccess() throws Exception {
-		mockMvc
-			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-				.param("name", "George")
-				.param("date", LocalDate.now().plusDays(1).toString())
-				.param("description", "Visit Description"))
-			.andExpect(status().is3xxRedirection())
-			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	void processNewVisitFormHasErrors() {
+		given().formParam("name", "George")
+			.when()
+			.post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+			.then()
+			.statusCode(200)
+			.body(containsString(FORM))
+			.body(containsString("must not be blank"));
 	}
 
 	@Test
-	void processNewVisitFormHasErrors() throws Exception {
-		mockMvc
-			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).param("name",
-					"George"))
-			.andExpect(model().attributeHasErrors("visit"))
-			.andExpect(status().isOk())
-			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	void processNewVisitFormHasErrorsWhenVisitDateIsNotInFuture() {
+		given().formParam("name", "George")
+			.formParam("date", LocalDate.now().toString())
+			.formParam("description", "Visit Description")
+			.when()
+			.post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+			.then()
+			.statusCode(200)
+			.body(containsString(FORM))
+			.body(containsString("Visit date must be in the future"));
 	}
 
 	@Test
-	void processNewVisitFormHasErrorsWhenVisitDateIsNotInFuture() throws Exception {
-		mockMvc
-			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-				.param("name", "George")
-				.param("date", LocalDate.now().toString())
-				.param("description", "Visit Description"))
-			.andExpect(model().attributeHasFieldErrors("visit", "date"))
-			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
-			.andExpect(status().isOk())
-			.andExpect(view().name("pets/createOrUpdateVisitForm"));
-	}
-
-	@Test
-	void processNewVisitFormHasErrorsWhenDescriptionIsTooLong() throws Exception {
-		mockMvc
-			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-				.param("name", "George")
-				.param("date", LocalDate.now().plusDays(1).toString())
-				.param("description", "a".repeat(256)))
-			.andExpect(model().attributeHasFieldErrors("visit", "description"))
-			.andExpect(status().isOk())
-			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	void processNewVisitFormHasErrorsWhenDescriptionIsTooLong() {
+		given().formParam("name", "George")
+			.formParam("date", LocalDate.now().plusDays(1).toString())
+			.formParam("description", "a".repeat(256))
+			.when()
+			.post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+			.then()
+			.statusCode(200)
+			.body(containsString(FORM))
+			.body(containsString("size must be between 0 and 255"));
 	}
 
 }

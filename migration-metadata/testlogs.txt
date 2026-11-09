@@ -1,0 +1,44 @@
+Running org.springframework.samples.petclinic.MySqlIntegrationTests
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 0.004 s -- in org.springframework.samples.petclinic.MySqlIntegrationTests
+Running org.springframework.samples.petclinic.PetClinicConcurrencyTests
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.810 s -- in org.springframework.samples.petclinic.PetClinicConcurrencyTests
+Running org.springframework.samples.petclinic.PetClinicIntegrationTests
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.117 s -- in org.springframework.samples.petclinic.PetClinicIntegrationTests
+Running org.springframework.samples.petclinic.model.ValidatorTests
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.016 s -- in org.springframework.samples.petclinic.model.ValidatorTests
+Running org.springframework.samples.petclinic.owner.OwnerControllerTests
+Tests run: 19, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0.409 s -- in org.springframework.samples.petclinic.owner.OwnerControllerTests
+Running org.springframework.samples.petclinic.owner.PetControllerTests
+Running org.springframework.samples.petclinic.owner.PetControllerTests$ProcessUpdateFormHasErrors
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.064 s -- in org.springframework.samples.petclinic.owner.PetControllerTests$ProcessUpdateFormHasErrors
+Running org.springframework.samples.petclinic.owner.PetControllerTests$ProcessCreationFormHasErrors
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.099 s -- in org.springframework.samples.petclinic.owner.PetControllerTests$ProcessCreationFormHasErrors
+Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.253 s -- in org.springframework.samples.petclinic.owner.PetControllerTests
+Running org.springframework.samples.petclinic.owner.VisitControllerTests
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.097 s -- in org.springframework.samples.petclinic.owner.VisitControllerTests
+Running org.springframework.samples.petclinic.service.ClinicServiceTests
+Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.093 s -- in org.springframework.samples.petclinic.service.ClinicServiceTests
+Running org.springframework.samples.petclinic.system.CrashControllerIntegrationTests
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.415 s -- in org.springframework.samples.petclinic.system.CrashControllerIntegrationTests
+Running org.springframework.samples.petclinic.system.WelcomeControllerTests
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.034 s -- in org.springframework.samples.petclinic.system.WelcomeControllerTests
+Running org.springframework.samples.petclinic.vet.VetControllerTests
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.065 s -- in org.springframework.samples.petclinic.vet.VetControllerTests
+Running org.springframework.samples.petclinic.PostgresIntegrationTests
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 2, Time elapsed: 0 s -- in org.springframework.samples.petclinic.PostgresIntegrationTests
+Running org.springframework.samples.petclinic.owner.OwnerTests
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in org.springframework.samples.petclinic.owner.OwnerTests
+Running org.springframework.samples.petclinic.owner.PetTypeFormatterTests
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.038 s -- in org.springframework.samples.petclinic.owner.PetTypeFormatterTests
+Running org.springframework.samples.petclinic.owner.PetValidatorTests
+Running org.springframework.samples.petclinic.owner.PetValidatorTests$ValidateHasErrors
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in org.springframework.samples.petclinic.owner.PetValidatorTests$ValidateHasErrors
+Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in org.springframework.samples.petclinic.owner.PetValidatorTests
+Running org.springframework.samples.petclinic.system.CrashControllerTests
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in org.springframework.samples.petclinic.system.CrashControllerTests
+Running org.springframework.samples.petclinic.system.I18nPropertiesSyncTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.017 s -- in org.springframework.samples.petclinic.system.I18nPropertiesSyncTest
+Running org.springframework.samples.petclinic.vet.VetTests
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in org.springframework.samples.petclinic.vet.VetTests
+Tests run: 82, Failures: 0, Errors: 0, Skipped: 5
+BUILD SUCCESS

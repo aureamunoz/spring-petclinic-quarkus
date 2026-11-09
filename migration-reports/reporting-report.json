@@ -1,0 +1,29 @@
+{
+  "module": "reporting",
+  "status": "SUCCESS",
+  "timestamp": "2026-11-06T15:59:31Z",
+  "summary": "Generated migration-summary.md and execution-metadata.json",
+  "actions_performed": [
+    {
+      "action": "collect_execution_metadata",
+      "description": "Gathered agent, model, token, and timing data"
+    },
+    {
+      "action": "aggregate_module_reports",
+      "description": "Read per-module reports from migration-reports/"
+    },
+    {
+      "action": "generate_migration_summary",
+      "description": "Produced migration-summary.md (13 sections)"
+    }
+  ],
+  "files_created": [
+    "migration-metadata/execution-metadata.json",
+    "migration-summary.md",
+    "migration-reports/reporting-report.json"
+  ],
+  "next_module": null,
+  "notes": [
+    "Token usage and cost are not exposed to the agent in this session; set to null"
+  ]
+}

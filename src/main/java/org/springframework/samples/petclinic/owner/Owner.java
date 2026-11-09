@@ -18,10 +18,10 @@ package org.springframework.samples.petclinic.owner;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
-import org.springframework.core.style.ToStringCreator;
+import org.springframework.samples.petclinic.model.PageResult;
 import org.springframework.samples.petclinic.model.Person;
-import org.springframework.util.Assert;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -37,6 +37,9 @@ import jakarta.validation.constraints.Size;
 
 /**
  * Simple JavaBean domain object representing an owner.
+ * <p>
+ * Panache Active Record: the queries of the former Spring Data {@code OwnerRepository}
+ * are static methods of this entity.
  *
  * @author Ken Krebs
  * @author Juergen Hoeller
@@ -52,46 +55,51 @@ public class Owner extends Person {
 	@Column
 	@NotBlank
 	@Size(max = 255)
-	private String address;
+	public String address;
 
 	@Column
 	@NotBlank
 	@Size(max = 80)
-	private String city;
+	public String city;
 
 	@Column
 	@NotBlank
 	@Pattern(regexp = "\\d{10}", message = "{telephone.invalid}")
-	private String telephone;
+	public String telephone;
 
 	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
 	@JoinColumn(name = "owner_id")
 	@OrderBy("name")
 	private final List<Pet> pets = new ArrayList<>();
 
-	public String getAddress() {
-		return this.address;
+	// ---- Queries (formerly OwnerRepository extends JpaRepository<Owner, Integer>) ----
+
+	/**
+	 * Retrieve {@link Owner}s from the data store by last name, returning all owners
+	 * whose last name <i>starts</i> with the given name (Spring Data
+	 * {@code findByLastNameStartingWith(String, Pageable)}).
+	 * @param lastName Value to search for
+	 * @param pageIndex 0-based page index
+	 * @param pageSize page size
+	 * @return a page of matching {@link Owner}s (possibly empty)
+	 */
+	public static PageResult<Owner> findByLastNameStartingWith(String lastName, int pageIndex, int pageSize) {
+		return PageResult.of(find("lastName like ?1 escape '\\'", escapeLike(lastName) + "%"), pageIndex, pageSize);
 	}
 
-	public void setAddress(String address) {
-		this.address = address;
+	/**
+	 * Retrieve an {@link Owner} from the data store by id (Spring Data
+	 * {@code Optional<Owner> findById(Integer)}).
+	 */
+	public static Optional<Owner> findOwnerById(Integer id) {
+		return findByIdOptional(id);
 	}
 
-	public String getCity() {
-		return this.city;
+	private static String escapeLike(String value) {
+		return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
 	}
 
-	public void setCity(String city) {
-		this.city = city;
-	}
-
-	public String getTelephone() {
-		return this.telephone;
-	}
-
-	public void setTelephone(String telephone) {
-		this.telephone = telephone;
-	}
+	// ---- Domain logic ----
 
 	public List<Pet> getPets() {
 		return this.pets;
@@ -105,7 +113,7 @@ public class Owner extends Person {
 			return;
 		}
 		for (Pet existingPet : getPets()) {
-			if (!existingPet.isNew() && !pet.isNew() && Objects.equals(existingPet.getId(), pet.getId())) {
+			if (!existingPet.isNew() && !pet.isNew() && Objects.equals(existingPet.id, pet.id)) {
 				return;
 			}
 		}
@@ -129,7 +137,7 @@ public class Owner extends Person {
 	public Pet getPet(Integer id) {
 		for (Pet pet : getPets()) {
 			if (!pet.isNew()) {
-				Integer compId = pet.getId();
+				Integer compId = pet.id;
 				if (Objects.equals(compId, id)) {
 					return pet;
 				}
@@ -146,7 +154,7 @@ public class Owner extends Person {
 	 */
 	public Pet getPet(String name, boolean ignoreNew) {
 		for (Pet pet : getPets()) {
-			String compName = pet.getName();
+			String compName = pet.name;
 			if (compName != null && compName.equalsIgnoreCase(name)) {
 				if (!ignoreNew || !pet.isNew()) {
 					return pet;
@@ -158,14 +166,11 @@ public class Owner extends Person {
 
 	@Override
 	public String toString() {
-		return new ToStringCreator(this).append("id", this.getId())
-			.append("new", this.isNew())
-			.append("lastName", this.getLastName())
-			.append("firstName", this.getFirstName())
-			.append("address", this.address)
-			.append("city", this.city)
-			.append("telephone", this.telephone)
-			.toString();
+		// Was org.springframework.core.style.ToStringCreator
+		return getClass().getSimpleName() + "@" + Integer.toHexString(hashCode()) + " [id = " + this.id + ", new = "
+				+ this.isNew() + ", lastName = '" + this.lastName + "', firstName = '" + this.firstName
+				+ "', address = '" + this.address + "', city = '" + this.city + "', telephone = '" + this.telephone
+				+ "']";
 	}
 
 	/**
@@ -174,15 +179,18 @@ public class Owner extends Person {
 	 * @param visit the visit to add, must not be {@literal null}.
 	 */
 	public void addVisit(Integer petId, Visit visit) {
-
-		Assert.notNull(petId, "Pet identifier must not be null!");
-		Assert.notNull(visit, "Visit must not be null!");
-
+		// Was org.springframework.util.Assert.notNull (throws IllegalArgumentException)
+		requireArgument(petId != null, "Pet identifier must not be null!");
+		requireArgument(visit != null, "Visit must not be null!");
 		Pet pet = getPet(petId);
-
-		Assert.notNull(pet, "Invalid Pet identifier!");
-
+		requireArgument(pet != null, "Invalid Pet identifier!");
 		pet.addVisit(visit);
+	}
+
+	private static void requireArgument(boolean condition, String message) {
+		if (!condition) {
+			throw new IllegalArgumentException(message);
+		}
 	}
 
 }

@@ -1,0 +1,24 @@
+{
+  "module": "frontend",
+  "status": "SUCCESS",
+  "timestamp": "2026-11-06T15:59:31Z",
+  "technology": "Thymeleaf -> Qute",
+  "templates_converted": 11,
+  "templates_removed": [
+    "fragments/inputField.html",
+    "fragments/selectField.html"
+  ],
+  "templates_created": [
+    "tags/inputField.html",
+    "tags/selectField.html"
+  ],
+  "static_moved": "static/resources -> META-INF/resources/resources",
+  "csrf_tokens_found": 0,
+  "fixes": [
+    {
+      "file": "system/CrashController.java",
+      "issue": "406 Not Acceptable for Accept: text/html",
+      "fix": "@Produces(TEXT_HTML, APPLICATION_JSON)"
+    }
+  ]
+}

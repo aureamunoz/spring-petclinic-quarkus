@@ -1,0 +1,23 @@
+{
+  "module": "prerequisite",
+  "status": "SUCCESS",
+  "timestamp": "2026-11-06T15:40:49Z",
+  "checks": [
+    {
+      "check": "jdk",
+      "result": "PASS",
+      "detail": "GraalVM CE 25.0.2 >= required 21 (source: argument)"
+    },
+    {
+      "check": "build-tool",
+      "result": "PASS",
+      "detail": "Maven 3.9.16 via ./mvnw (pom.xml and build.gradle both present, Maven preferred)"
+    },
+    {
+      "check": "container-runtime",
+      "result": "WARN",
+      "detail": "Docker CLI present but OrbStack daemon unreachable; Podman 6.0.2 reachable"
+    }
+  ],
+  "gate": "PASS"
+}

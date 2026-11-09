@@ -16,22 +16,31 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
-import java.util.Map;
-import java.util.Optional;
+import java.time.format.DateTimeParseException;
 
-import org.springframework.stereotype.Controller;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.WebDataBinder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.InitBinder;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.samples.petclinic.system.Flash;
+import org.springframework.samples.petclinic.system.FormErrors;
+import org.springframework.samples.petclinic.system.Messages;
 
-import jakarta.validation.Valid;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import io.quarkus.qute.CheckedTemplate;
+import io.quarkus.qute.TemplateInstance;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+import jakarta.validation.Validator;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.core.Response;
 
 /**
+ * Migrated from a Spring MVC {@code @Controller} to a JAX-RS resource rendering Qute
+ * templates.
+ *
  * @author Juergen Hoeller
  * @author Ken Krebs
  * @author Arjen Poutsma
@@ -39,76 +48,86 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * @author Dave Syer
  * @author Wick Dynex
  */
-@Controller
-class VisitController {
+@Path("/owners")
+@Produces(MediaType.TEXT_HTML)
+public class VisitController {
 
-	private final OwnerRepository owners;
+	@CheckedTemplate(basePath = "pets")
+	public static class Templates {
 
-	public VisitController(OwnerRepository owners) {
-		this.owners = owners;
+		public static native TemplateInstance createOrUpdateVisitForm(Owner owner, Pet pet, Visit visit,
+				LocalDate minVisitDate, FormErrors errors);
+
 	}
 
-	@InitBinder
-	public void setAllowedFields(WebDataBinder dataBinder) {
-		dataBinder.setDisallowedFields("id", "*.id");
-	}
+	@Inject
+	Validator validator;
 
 	/**
-	 * Called before each and every @RequestMapping annotated method. 2 goals: - Make sure
-	 * we always have fresh data - Since we do not use the session scope, make sure that
-	 * Pet object always has an id (Even though id is not part of the form fields)
-	 * @param petId
-	 * @return Pet
+	 * Replaces the Spring {@code @ModelAttribute("visit") loadPetWithVisit(...)} method:
+	 * make sure we always have fresh data.
 	 */
-	@ModelAttribute("visit")
-	public Visit loadPetWithVisit(@PathVariable("ownerId") int ownerId, @PathVariable("petId") int petId,
-			Map<String, Object> model) {
-		Optional<Owner> optionalOwner = owners.findById(ownerId);
-		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
-				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
-
+	private static Pet loadPet(Owner owner, int ownerId, int petId) {
 		Pet pet = owner.getPet(petId);
 		if (pet == null) {
 			throw new IllegalArgumentException(
 					"Pet with id " + petId + " not found for owner with id " + ownerId + ".");
 		}
-		model.put("pet", pet);
-		model.put("owner", owner);
-
-		Visit visit = new Visit();
-		pet.addVisit(visit);
-		return visit;
+		return pet;
 	}
 
-	@ModelAttribute("minVisitDate")
-	public LocalDate minVisitDate() {
+	/** Replaces the Spring {@code @ModelAttribute("minVisitDate")} method. */
+	private static LocalDate minVisitDate() {
 		return LocalDate.now().plusDays(1);
 	}
 
-	// Spring MVC calls method loadPetWithVisit(...) before initNewVisitForm is
-	// called
-	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String initNewVisitForm() {
-		return "pets/createOrUpdateVisitForm";
+	@GET
+	@Path("/{ownerId}/pets/{petId}/visits/new")
+	public TemplateInstance initNewVisitForm(@PathParam("ownerId") int ownerId, @PathParam("petId") int petId) {
+		Owner owner = OwnerController.findOwner(ownerId);
+		Pet pet = loadPet(owner, ownerId, petId);
+		return Templates.createOrUpdateVisitForm(owner, pet, new Visit(), minVisitDate(), new FormErrors());
 	}
 
-	// Spring MVC calls method loadPetWithVisit(...) before processNewVisitForm is
-	// called
-	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String processNewVisitForm(@ModelAttribute Owner owner, @PathVariable int petId, @Valid Visit visit,
-			BindingResult result, RedirectAttributes redirectAttributes) {
-		if (visit.getDate() != null && !visit.getDate().isAfter(LocalDate.now())) {
-			result.rejectValue("date", "typeMismatch.visitDate");
+	@POST
+	@Path("/{ownerId}/pets/{petId}/visits/new")
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+	@Transactional
+	public Response processNewVisitForm(@PathParam("ownerId") int ownerId, @PathParam("petId") int petId,
+			MultivaluedMap<String, String> form) {
+		Owner owner = OwnerController.findOwner(ownerId);
+		Pet pet = loadPet(owner, ownerId, petId);
+
+		// Data binding (id is never bound, was @InitBinder setDisallowedFields("id", "*.id"))
+		Visit visit = new Visit();
+		FormErrors errors = new FormErrors();
+		if (form.containsKey("date")) {
+			String value = form.getFirst("date");
+			try {
+				visit.date = (value == null || value.isBlank()) ? null : LocalDate.parse(value.strip());
+			}
+			catch (DateTimeParseException ex) {
+				visit.date = null;
+				errors.rejectValue("date", "typeMismatch", Messages.get("typeMismatch.date"));
+			}
+		}
+		if (form.containsKey("description")) {
+			visit.description = form.getFirst("description");
+		}
+		errors.addViolations(validator.validate(visit));
+
+		if (visit.date != null && !visit.date.isAfter(LocalDate.now())) {
+			errors.rejectValue("date", "typeMismatch.visitDate");
 		}
 
-		if (result.hasErrors()) {
-			return "pets/createOrUpdateVisitForm";
+		if (errors.hasErrors()) {
+			return Response.ok(Templates.createOrUpdateVisitForm(owner, pet, visit, minVisitDate(), errors)).build();
 		}
 
 		owner.addVisit(petId, visit);
-		this.owners.save(owner);
-		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
-		return "redirect:/owners/{ownerId}";
+		// owner is managed: the new visit is persisted by cascade on commit (was
+		// owners.save(owner))
+		return Flash.redirect("/owners/" + ownerId, Flash.MESSAGE, "Your visit has been booked");
 	}
 
 }

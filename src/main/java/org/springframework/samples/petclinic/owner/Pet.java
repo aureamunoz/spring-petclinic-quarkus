@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.samples.petclinic.model.NamedEntity;
 
 import jakarta.persistence.CascadeType;
@@ -45,34 +44,19 @@ import jakarta.persistence.Table;
 @Table(name = "pets")
 public class Pet extends NamedEntity {
 
+	// REMOVED: @DateTimeFormat(pattern = "yyyy-MM-dd") (Spring MVC binding). Form values are
+	// parsed as ISO-8601 (yyyy-MM-dd) by PetResource.
 	@Column
-	@DateTimeFormat(pattern = "yyyy-MM-dd")
-	private LocalDate birthDate;
+	public LocalDate birthDate;
 
 	@ManyToOne
 	@JoinColumn(name = "type_id")
-	private PetType type;
+	public PetType type;
 
 	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
 	@JoinColumn(name = "pet_id")
 	@OrderBy("date ASC")
 	private final Set<Visit> visits = new LinkedHashSet<>();
-
-	public void setBirthDate(LocalDate birthDate) {
-		this.birthDate = birthDate;
-	}
-
-	public LocalDate getBirthDate() {
-		return this.birthDate;
-	}
-
-	public PetType getType() {
-		return this.type;
-	}
-
-	public void setType(PetType type) {
-		this.type = type;
-	}
 
 	public Collection<Visit> getVisits() {
 		return this.visits;

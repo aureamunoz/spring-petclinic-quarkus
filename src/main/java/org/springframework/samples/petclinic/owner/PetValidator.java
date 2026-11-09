@@ -15,9 +15,7 @@
  */
 package org.springframework.samples.petclinic.owner;
 
-import org.springframework.util.StringUtils;
-import org.springframework.validation.Errors;
-import org.springframework.validation.Validator;
+import org.springframework.samples.petclinic.system.FormErrors;
 
 /**
  * <code>Validator</code> for <code>Pet</code> forms.
@@ -25,45 +23,50 @@ import org.springframework.validation.Validator;
  * We're not using Bean Validation annotations here because it is easier to define such
  * validation rule in Java.
  * </p>
+ * Formerly implemented {@code org.springframework.validation.Validator}; now reports into
+ * {@link FormErrors}.
  *
  * @author Ken Krebs
  * @author Juergen Hoeller
  */
-public class PetValidator implements Validator {
+public class PetValidator {
 
 	private static final String REQUIRED = "required";
 
 	private static final int MAX_NAME_LENGTH = 30;
 
-	@Override
-	public void validate(Object obj, Errors errors) {
+	public void validate(Object obj, FormErrors errors) {
 		Pet pet = (Pet) obj;
-		String name = pet.getName();
+		String name = pet.name;
 		// name validation
-		if (!StringUtils.hasText(name)) {
-			errors.rejectValue("name", REQUIRED, REQUIRED);
+		if (!hasText(name)) {
+			errors.rejectValue("name", REQUIRED);
 		}
 		else if (name.length() > MAX_NAME_LENGTH) {
 			errors.rejectValue("name", "size", "Name must be no more than 30 characters");
 		}
 
 		// type validation
-		if (pet.isNew() && pet.getType() == null) {
-			errors.rejectValue("type", REQUIRED, REQUIRED);
+		if (pet.isNew() && pet.type == null) {
+			errors.rejectValue("type", REQUIRED);
 		}
 
 		// birth date validation
-		if (pet.getBirthDate() == null) {
-			errors.rejectValue("birthDate", REQUIRED, REQUIRED);
+		if (pet.birthDate == null) {
+			errors.rejectValue("birthDate", REQUIRED);
 		}
 	}
 
 	/**
 	 * This Validator validates *just* Pet instances
 	 */
-	@Override
 	public boolean supports(Class<?> clazz) {
 		return Pet.class.isAssignableFrom(clazz);
+	}
+
+	/** Replacement for {@code org.springframework.util.StringUtils.hasText}. */
+	static boolean hasText(String value) {
+		return value != null && !value.isBlank();
 	}
 
 }
